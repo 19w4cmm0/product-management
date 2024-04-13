@@ -39,10 +39,20 @@ module.exports.index = async (req, res) => {
     
 //End Pagination
 
+// Sort
+let sort = {};
+
+if (req.query.sortKey && req.query.sortValue) {
+    sort[req.query.sortKey] = req.query.sortValue;
+} else {
+    sort.position = "desc";
+}
+
+// End Sort
 
 // Find
     const products = await Product.find(find)
-        .sort({position: "desc"})
+        .sort(sort)
         .limit(objectPagination.limitItems)
         .skip(objectPagination.skip);
 
@@ -143,10 +153,6 @@ module.exports.createPost = async (req, res) => {
         req.body.position = parseInt(req.body.position);
     }
     
-    // if(req.file){
-    //     req.body.thumbnail = `/uploads/${req.file.filename}`;
-    // }
-
 
     const product = new Product(req.body);
     await product.save();

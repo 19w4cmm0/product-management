@@ -10,6 +10,7 @@ const app = express()
 const mongoose = require("mongoose");
 const database = require("./config/database");
 const systemConfig = require("./config/system");
+var path = require('path');
 
 require('dotenv').config()
 
@@ -33,6 +34,11 @@ app.use(session({ cookie: { maxAge: 60000 }}));
 app.use(flash());
 
 // End Flash
+
+//Tiny MCE 
+app.use('/tinymce', express.static(path.join(__dirname, 'node_modules', 'tinymce')));
+
+//End Tiny MCE
 
 // App locals Variables
 app.locals.prefixAdmin = systemConfig.prefixAdmin;
