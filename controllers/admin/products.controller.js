@@ -1,5 +1,7 @@
 const Product = require("../../models/product.model");
 const ProductCategory = require("../../models/product-category.model");
+const Account = require("../../models/accounts.model");
+
 const systemConfig = require("../../config/system");
 const filterStatusHelper = require("../../helpers/filterStatus");
 const searchHelper = require("../../helpers/search");
@@ -58,6 +60,26 @@ if (req.query.sortKey && req.query.sortValue) {
         .limit(objectPagination.limitItems)
         .skip(objectPagination.skip);
 
+    for ( const product of products) {
+        // Lấy ra thông tin người tạo
+        const user = await Account.findOne({
+            _id: product.createdBy.account_id
+        });
+
+        if(user) {
+            product.accountFullName = user.fullName;
+        }
+        // Lấy ra thông tin người cập nhật gần nhất
+        const updatedBy = product.updatedBy.slice(-1)[0];
+        if (updatedBy) {
+            const userUpdated = await Account.findOne({
+                _id: updatedBy.account_id
+            })
+            
+            updatedBy.accountFullName = userUpdated.fullName;
+        }
+    }
+
     res.render("admin/pages/products/index", {
         pageTitle: "Danh sách sản phẩm",
         products: products,
@@ -73,7 +95,15 @@ module.exports.changeStatus = async (req, res) => {
     const status = req.params.status;
     const id = req.params.id;
 
-    await Product.updateOne({ _id: id}, { status: status});
+    const updatedBy = {
+        account_id: res.locals.user.id,
+        updateAt: new Date()
+    }
+
+    await Product.updateOne({ _id: id}, { 
+        status: status,
+        $push: { updatedBy : updatedBy}
+    });
 
     req.flash("success", "Cập nhật trạng thái thành công!");
 
@@ -85,13 +115,24 @@ module.exports.changeStatus = async (req, res) => {
         const type = req.body.type;
         const ids = req.body.ids.split(", ");
 
+        const updatedBy = {
+            account_id: res.locals.user.id,
+            updateAt: new Date()
+        }
+
         switch (type) {
             case "active":
-                await Product.updateMany({ _id: { $in: ids }}, { status: "active"});
+                await Product.updateMany({ _id: { $in: ids }}, { 
+                    status: "active",
+                    $push: { updatedBy : updatedBy}
+                });
                 req.flash("success", `Cập nhật trạng thái ${ids.length} sản phẩm thành công!`);
                 break;
             case "inactive":
-                await Product.updateMany({ _id: { $in: ids }}, { status: "inactive"});
+                await Product.updateMany({ _id: { $in: ids }}, { 
+                    status: "inactive",
+                    $push: { updatedBy : updatedBy}
+                });
                 req.flash("success", `Cập nhật trạng thái ${ids.length} sản phẩm thành công!`);
                 break;
             case "delete-all":
@@ -109,7 +150,8 @@ module.exports.changeStatus = async (req, res) => {
                     let [id, position] = item.split("-");
                     position = parseInt(position);
                     await Product.updateOne({ _id: id}, { 
-                        position: position
+                        position: position,
+                        $push: { updatedBy : updatedBy}
                     });
                 }
                 req.flash("success", `Đã thay đổi vị trí của ${ids.length} sản phẩm thành công!`);
@@ -163,6 +205,9 @@ module.exports.createPost = async (req, res) => {
         req.body.position = parseInt(req.body.position);
     }
     
+    req.body.createdBy = {
+        account_id: res.locals.user.id
+    }
 
     const product = new Product(req.body);
     await product.save();
@@ -205,7 +250,14 @@ module.exports.editPatch = async (req, res) => {
     req.body.position = parseInt(req.body.position);
 
     try {
-        await Product.updateOne({_id: id}, req.body); 
+        const updatedBy = {
+            account_id: res.locals.user.id,
+            updateAt: new Date()
+        }
+        await Product.updateOne({_id: id}, {
+            ...req.body,
+            $push: { updatedBy: updatedBy}
+        }); 
         req.flash("success", `Cập nhật thành công!`);
     } catch (error) {
         req.flash("success", `Cập nhật thất bại!`);

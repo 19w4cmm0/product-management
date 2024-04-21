@@ -11,6 +11,7 @@ const mongoose = require("mongoose");
 const database = require("./config/database");
 const systemConfig = require("./config/system");
 var path = require('path');
+const moment = require("moment");
 
 require('dotenv').config()
 
@@ -42,12 +43,20 @@ app.use('/tinymce', express.static(path.join(__dirname, 'node_modules', 'tinymce
 
 // App locals Variables
 app.locals.prefixAdmin = systemConfig.prefixAdmin;
+app.locals.moment = moment;
+
 
 app.use(express.static(`${__dirname}/public`));
 
   route(app);
   routeAdmin(app);
+
+app.get("*", (req, res) => {
+  res.render("client/pages/errors/404", {
+    pageTitle: "404 Not found"
+  });
+});
   
-  app.listen(port, () => {
+app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
-  })
+  });

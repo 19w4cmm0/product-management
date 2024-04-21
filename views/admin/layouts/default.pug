@@ -6,6 +6,9 @@ html
 
        link(rel="stylesheet", href="/admin/css/style.css")
     body
+      if(role.permissions.length > 0)
+
+
        include ../partials/header.pug
        
        .body 
@@ -23,5 +26,7 @@ html
        //- End TinyMCE
 
        script(src="/admin/js/script.js")
+      else 
+       h1 Bạn không có quyền truy cập!
        
        
